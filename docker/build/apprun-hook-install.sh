@@ -178,4 +178,6 @@
 		echo " done."
 		exit
 	fi
+
+	set +eu
 }

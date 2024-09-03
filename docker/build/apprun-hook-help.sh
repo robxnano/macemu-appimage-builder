@@ -44,13 +44,10 @@
 		echo "  --sdlrender software"
 		echo "    Use '--sdlrender auto' to re-enable default behavior"
 		echo "    (use opengl if available)."
-		echo "  APP_GTK_THEME=yes (environment variable)"
-		echo "    Set to 'no' to try and use native GTK theme instead of bundled."
-		echo "    Or set to any bundled theme name: "
-		echo "    $(ls -m "$HERE/usr/share/themes")"
 		echo "  pauseAfterExecution=no (environment variable)"
 		echo "    Set to 'yes' to pause after execution."
 	fi
 
+    set +eu
     return
 }

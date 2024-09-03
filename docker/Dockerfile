@@ -10,7 +10,7 @@ RUN apt-get -y --no-install-recommends install \
 	# for macemu \
 	git \
 	automake gcc \
-	libgtk2.0-dev \
+	libgtk-3-dev \
 	libvdeplug-dev \
 	uuid-dev \
 	# for xen \
@@ -19,9 +19,7 @@ RUN apt-get -y --no-install-recommends install \
 	wget libaio-dev libyajl-dev \
 	libfdt-dev \
 	# required for prefs editor (not pulled otherwise in debian:buster) \
-	gvfs libgail-common libatk-adaptor \
-	# include gtk gail and theme engines \
-	gtk2-engines \
+	gvfs \
 	# for git \
 	ca-certificates \
 	# some build-essentials \
@@ -44,11 +42,6 @@ RUN apt-get -y --no-install-recommends install \
 ARG SKIP_VHD="n"
 ARG PACKAGING="linuxdeploy"
 ARG LXDEPLOY_ARCH=""
-
-# get some architecture "variables" going
-# copy only essential files from build directory (improves caching)
-COPY build/detect-archdir.sh /build/
-RUN /build/detect-archdir.sh && echo "ARCHDIR: $(cat /ARCHDIR)"
 
 # download xen (libvhd source)
 WORKDIR /usr/local/src/xen
@@ -73,10 +66,12 @@ RUN [ "$SKIP_VHD" = y ] || cp /usr/local/src/xen/tools/blktap2/include/*.h /usr/
 
 # download linuxdeploy (AppImage builder)
 WORKDIR /usr/local/bin
-RUN [ "$PACKAGING" != "linuxdeploy" ] || wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${LXDEPLOY_ARCH}.AppImage -O linuxdeploy
+RUN [ "$PACKAGING" != "linuxdeploy" ] || wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${LXDEPLOY_ARCH}.AppImage -O linuxdeploy && \
+wget https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
 # extract linuxdeploy to use it without FUSE within build process
 RUN [ "$PACKAGING" != "linuxdeploy" ] || ( \
 	chmod a+x ./linuxdeploy && \
+	chmod +x ./linuxdeploy-plugin-gtk.sh && \
 	./linuxdeploy --appimage-extract && \
 	rm ./linuxdeploy && \
 	mv squashfs-root linuxdeploy.appdir && \
@@ -166,34 +161,22 @@ WORKDIR /usr/local/src/macemu/BasiliskII/src/Unix
 RUN cp /build/version-* AppDir/usr/local/share/
 
 # base build files referenced in linuxdeploy
-COPY build/bundle-gtk2.sh     /build/bundle-gtk2.sh
 COPY build/BasiliskII.desktop /build/BasiliskII.desktop
 COPY build/BasiliskII.png     /build/BasiliskII.png
-COPY build/AppRun.sh          /build/AppRun.sh
 # extra files added to AppDir
 COPY build/BasiliskII.appdata.xml    AppDir/usr/share/metainfo/
 COPY build/BasiliskIIGUI.png         AppDir/usr/share/icons/
 COPY build/BasiliskII.desktop.in     AppDir/BasiliskII.desktop.in
 COPY build/BasiliskIIGUI.desktop.in  AppDir/BasiliskIIGUI.desktop.in
 
-RUN APPDIR=./AppDir /build/bundle-gtk2.sh
 COPY build/apprun-hook-help.sh AppDir/apprun-hooks/05-apprun-hook-help.sh
 COPY build/apprun-hook-install.sh AppDir/apprun-hooks/10-apprun-hook-install.sh
-RUN [ "$PACKAGING" != "linuxdeploy" ] || export ARCHDIR="$(cat /ARCHDIR)" && linuxdeploy \
+RUN [ "$PACKAGING" != "linuxdeploy" ] || linuxdeploy \
 	--appdir AppDir \
 	--desktop-file=/build/BasiliskII.desktop \
 	--icon-file=/build/BasiliskII.png \
-	--custom-apprun /build/AppRun.sh \
 	--executable ./BasiliskII \
-	--library /usr/lib/${ARCHDIR}libpango-1.0.so.0 \
-	--library /usr/lib/${ARCHDIR}libpangoft2-1.0.so.0 \
-	--library /usr/lib/${ARCHDIR}libpangocairo-1.0.so.0 \
-	--library /usr/lib/${ARCHDIR}libthai.so.0 \
-	--library /usr/lib/${ARCHDIR}libthai.so.0.3.0 \
-	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libatk-bridge.so \
-	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libferret.so \
-	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libgail.so \
-	--library /usr/lib/${ARCHDIR}gvfs/libgvfscommon.so \
+	--plugin gtk \
 	--output appimage \
 	2>&1 | tee /tmp/linuxdeploy-BasiliskII \
 ;
@@ -248,35 +231,23 @@ WORKDIR /usr/local/src/macemu/SheepShaver/src/Unix
 RUN cp /build/version-* AppDir/usr/local/share/
 
 # base build files referenced in linuxdeploy
-COPY build/bundle-gtk2.sh      /build/bundle-gtk2.sh
 COPY build/SheepShaver.desktop /build/SheepShaver.desktop
 COPY build/SheepShaver.png     /build/SheepShaver.png
-COPY build/AppRun.sh           /build/AppRun.sh
 # extra files added to AppDir
 COPY build/SheepShaver.appdata.xml   AppDir/usr/share/metainfo/
 COPY build/SheepShaverGUI.png        AppDir/usr/share/icons/
 COPY build/SheepShaver.desktop.in    AppDir/SheepShaver.desktop.in
 COPY build/SheepShaverGUI.desktop.in AppDir/SheepShaverGUI.desktop.in
 
-RUN APPDIR=./AppDir /build/bundle-gtk2.sh
 COPY build/apprun-hook-help.sh AppDir/apprun-hooks/05-apprun-hook-help.sh
 COPY build/apprun-hook-install.sh AppDir/apprun-hooks/10-apprun-hook-install.sh
 COPY build/apprun-hook-mmap.sh AppDir/apprun-hooks/20-apprun-hook-mmap.sh
-RUN [ "$PACKAGING" != "linuxdeploy" ] || export ARCHDIR="$(cat /ARCHDIR)" && linuxdeploy \
+RUN [ "$PACKAGING" != "linuxdeploy" ] || linuxdeploy \
 	--appdir AppDir \
 	--desktop-file=/build/SheepShaver.desktop \
 	--icon-file=/build/SheepShaver.png \
-	--custom-apprun /build/AppRun.sh \
 	--executable ./SheepShaver \
-	--library /usr/lib/${ARCHDIR}libpango-1.0.so.0 \
-	--library /usr/lib/${ARCHDIR}libpangoft2-1.0.so.0 \
-	--library /usr/lib/${ARCHDIR}libpangocairo-1.0.so.0 \
-	--library /usr/lib/${ARCHDIR}libthai.so.0 \
-	--library /usr/lib/${ARCHDIR}libthai.so.0.3.0 \
-	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libatk-bridge.so \
-	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libferret.so \
-	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libgail.so \
-	--library /usr/lib/${ARCHDIR}gvfs/libgvfscommon.so \
+	--plugin gtk \
 	--output appimage \
 	2>&1 | tee /tmp/linuxdeploy-SheepShaver \
 ;

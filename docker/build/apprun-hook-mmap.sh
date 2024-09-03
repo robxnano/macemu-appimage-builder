@@ -159,5 +159,6 @@ https://wiki.debian.org/mmap_min_addr
 	
 	# run image
 	
+	set +eu
 	return
 }
