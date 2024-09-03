@@ -20,10 +20,20 @@
 	set -eu
 	set -o pipefail
 	
+	# podman preferred as it doesn't require root
+	if command -v podman; then
+		DOCKER=podman
+	elif command -v docker; then
+		DOCKER=docker
+	else
+		echo "Either docker or podman is required!"
+		exit 1
+	fi
+
 	# must be root to control docker
-	if [ "$USER" != "root" ]
+	if [ "$USER" != "root" ] && [ "$DOCKER" = "docker" ]
 	then
-		sudo -E "$0" $@
+		sudo -E "$0" "$@"
 		exit
 	fi
 	
@@ -121,7 +131,7 @@
 		build_status=0
 		# DOCKER_BUILDKIT=1 not applied so we can enter last intermediate image
 		# NOTE: you can still prepend DOCKER_BUILDKIT=1 if you know the build succeeds to use your cache
-		docker build \
+		$DOCKER build \
 			--platform $DOCKER_PLATFORM \
 			--build-arg DISTRO=$DISTRO \
 			--build-arg SKIP_VHD=$SKIP_VHD \
@@ -130,18 +140,18 @@
 			--build-arg LXDEPLOY_ARCH=$LXDEPLOY_ARCH \
 			--build-arg "MACEMU_SOURCE=$MACEMU_SOURCE" \
 			--build-arg "MACEMU_GIT_ARGS=$MACEMU_GIT_ARGS" \
-			--tag macemu-build:$TARGET-$DOCKER_SUFFIX \
-			--target $TARGET \
+			--tag macemu-build:"$TARGET-$DOCKER_SUFFIX" \
+			--target "$TARGET" \
 			docker \
 			2>&1 | tee compile.log \
 		|| build_status=$?
 		if [ "$build_status" = "0" ]
 		then
 			# image successfully created, start shell based on tag
-			docker run --rm -it \
+			$DOCKER run --rm -it \
 				--platform $DOCKER_PLATFORM \
 				-v "$(realpath ./):/compiledir" \
-				macemu-build:$TARGET-$DOCKER_SUFFIX \
+				macemu-build:"$TARGET-$DOCKER_SUFFIX" \
 				/bin/bash \
 			;
 		else
@@ -149,10 +159,10 @@
 			last_intermediate=$(tac compile.log | grep -E " ---> [0-9a-f]{12}" | head -n1 | sed "s/ ---> //")
 			if [ "$last_intermediate" != "" ]
 			then
-				docker run --rm -it \
+				$DOCKER run --rm -it \
 					--platform $DOCKER_PLATFORM \
 					-v "$(realpath ./):/compiledir" \
-					sha256:$last_intermediate \
+					sha256:"$last_intermediate" \
 					/bin/bash \
 				;
 			fi
@@ -164,7 +174,7 @@
 		sleep 2
 		
 		# DOCKER_BUILDKIT=1 currently required for custom --output
-		DOCKER_BUILDKIT=1 docker build \
+		DOCKER_BUILDKIT=1 $DOCKER build \
 			--platform $DOCKER_PLATFORM \
 			--build-arg DISTRO=$DISTRO \
 			--build-arg SKIP_VHD=$SKIP_VHD \
@@ -173,14 +183,14 @@
 			--build-arg LXDEPLOY_ARCH=$LXDEPLOY_ARCH \
 			--build-arg "MACEMU_SOURCE=$MACEMU_SOURCE" \
 			--build-arg "MACEMU_GIT_ARGS=$MACEMU_GIT_ARGS" \
-			--tag macemu-build:$TARGET-$DOCKER_SUFFIX \
-			--target $TARGET \
+			--tag macemu-build:"$TARGET-$DOCKER_SUFFIX" \
+			--target "$TARGET" \
 			--output=type=local,dest=./output \
 			docker \
 			2>&1 | tee compile.log \
 		;
 		
-		#docker run --platform=$DOCKER_PLATFORM --rm \
+		#$DOCKER run --platform=$DOCKER_PLATFORM --rm \
 		#	-v "$(realpath ./output):/externalOutput" \
 		#	macemu-build:$TARGET-$DOCKER_SUFFIX \
 		#	/bin/bash -c "cp -ax /output/* /externalOutput/" \

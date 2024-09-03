@@ -46,10 +46,9 @@ ARG PACKAGING="linuxdeploy"
 ARG LXDEPLOY_ARCH=""
 
 # get some architecture "variables" going
-SHELL [ "/bin/bash", "-c" ]
 # copy only essential files from build directory (improves caching)
 COPY build/detect-archdir.sh /build/
-RUN /build/detect-archdir.sh && echo "ARCHDIR: $(</ARCHDIR)"
+RUN /build/detect-archdir.sh && echo "ARCHDIR: $(cat /ARCHDIR)"
 
 # download xen (libvhd source)
 WORKDIR /usr/local/src/xen
@@ -180,21 +179,21 @@ COPY build/BasiliskIIGUI.desktop.in  AppDir/BasiliskIIGUI.desktop.in
 RUN APPDIR=./AppDir /build/bundle-gtk2.sh
 COPY build/apprun-hook-help.sh AppDir/apprun-hooks/05-apprun-hook-help.sh
 COPY build/apprun-hook-install.sh AppDir/apprun-hooks/10-apprun-hook-install.sh
-RUN [ "$PACKAGING" != "linuxdeploy" ] || linuxdeploy \
+RUN [ "$PACKAGING" != "linuxdeploy" ] || export ARCHDIR="$(cat /ARCHDIR)" && linuxdeploy \
 	--appdir AppDir \
 	--desktop-file=/build/BasiliskII.desktop \
 	--icon-file=/build/BasiliskII.png \
 	--custom-apprun /build/AppRun.sh \
 	--executable ./BasiliskII \
-	--library /usr/lib/$(</ARCHDIR)libpango-1.0.so.0 \
-	--library /usr/lib/$(</ARCHDIR)libpangoft2-1.0.so.0 \
-	--library /usr/lib/$(</ARCHDIR)libpangocairo-1.0.so.0 \
-	--library /usr/lib/$(</ARCHDIR)libthai.so.0 \
-	--library /usr/lib/$(</ARCHDIR)libthai.so.0.3.0 \
-	--library /usr/lib/$(</ARCHDIR)gtk-2.0/modules/libatk-bridge.so \
-	--library /usr/lib/$(</ARCHDIR)gtk-2.0/modules/libferret.so \
-	--library /usr/lib/$(</ARCHDIR)gtk-2.0/modules/libgail.so \
-	--library /usr/lib/$(</ARCHDIR)gvfs/libgvfscommon.so \
+	--library /usr/lib/${ARCHDIR}libpango-1.0.so.0 \
+	--library /usr/lib/${ARCHDIR}libpangoft2-1.0.so.0 \
+	--library /usr/lib/${ARCHDIR}libpangocairo-1.0.so.0 \
+	--library /usr/lib/${ARCHDIR}libthai.so.0 \
+	--library /usr/lib/${ARCHDIR}libthai.so.0.3.0 \
+	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libatk-bridge.so \
+	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libferret.so \
+	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libgail.so \
+	--library /usr/lib/${ARCHDIR}gvfs/libgvfscommon.so \
 	--output appimage \
 	2>&1 | tee /tmp/linuxdeploy-BasiliskII \
 ;
@@ -263,21 +262,21 @@ RUN APPDIR=./AppDir /build/bundle-gtk2.sh
 COPY build/apprun-hook-help.sh AppDir/apprun-hooks/05-apprun-hook-help.sh
 COPY build/apprun-hook-install.sh AppDir/apprun-hooks/10-apprun-hook-install.sh
 COPY build/apprun-hook-mmap.sh AppDir/apprun-hooks/20-apprun-hook-mmap.sh
-RUN [ "$PACKAGING" != "linuxdeploy" ] || linuxdeploy \
+RUN [ "$PACKAGING" != "linuxdeploy" ] || export ARCHDIR="$(cat /ARCHDIR)" && linuxdeploy \
 	--appdir AppDir \
 	--desktop-file=/build/SheepShaver.desktop \
 	--icon-file=/build/SheepShaver.png \
 	--custom-apprun /build/AppRun.sh \
 	--executable ./SheepShaver \
-	--library /usr/lib/$(</ARCHDIR)libpango-1.0.so.0 \
-	--library /usr/lib/$(</ARCHDIR)libpangoft2-1.0.so.0 \
-	--library /usr/lib/$(</ARCHDIR)libpangocairo-1.0.so.0 \
-	--library /usr/lib/$(</ARCHDIR)libthai.so.0 \
-	--library /usr/lib/$(</ARCHDIR)libthai.so.0.3.0 \
-	--library /usr/lib/$(</ARCHDIR)gtk-2.0/modules/libatk-bridge.so \
-	--library /usr/lib/$(</ARCHDIR)gtk-2.0/modules/libferret.so \
-	--library /usr/lib/$(</ARCHDIR)gtk-2.0/modules/libgail.so \
-	--library /usr/lib/$(</ARCHDIR)gvfs/libgvfscommon.so \
+	--library /usr/lib/${ARCHDIR}libpango-1.0.so.0 \
+	--library /usr/lib/${ARCHDIR}libpangoft2-1.0.so.0 \
+	--library /usr/lib/${ARCHDIR}libpangocairo-1.0.so.0 \
+	--library /usr/lib/${ARCHDIR}libthai.so.0 \
+	--library /usr/lib/${ARCHDIR}libthai.so.0.3.0 \
+	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libatk-bridge.so \
+	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libferret.so \
+	--library /usr/lib/${ARCHDIR}gtk-2.0/modules/libgail.so \
+	--library /usr/lib/${ARCHDIR}gvfs/libgvfscommon.so \
 	--output appimage \
 	2>&1 | tee /tmp/linuxdeploy-SheepShaver \
 ;
