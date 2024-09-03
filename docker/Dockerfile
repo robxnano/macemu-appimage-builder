@@ -66,12 +66,11 @@ RUN [ "$SKIP_VHD" = y ] || cp /usr/local/src/xen/tools/blktap2/include/*.h /usr/
 
 # download linuxdeploy (AppImage builder)
 WORKDIR /usr/local/bin
-RUN [ "$PACKAGING" != "linuxdeploy" ] || wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${LXDEPLOY_ARCH}.AppImage -O linuxdeploy && \
-wget https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
+COPY build/linuxdeploy-plugin-gtk.sh /usr/local/bin/
+RUN [ "$PACKAGING" != "linuxdeploy" ] || wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${LXDEPLOY_ARCH}.AppImage -O linuxdeploy
 # extract linuxdeploy to use it without FUSE within build process
 RUN [ "$PACKAGING" != "linuxdeploy" ] || ( \
 	chmod a+x ./linuxdeploy && \
-	chmod +x ./linuxdeploy-plugin-gtk.sh && \
 	./linuxdeploy --appimage-extract && \
 	rm ./linuxdeploy && \
 	mv squashfs-root linuxdeploy.appdir && \
